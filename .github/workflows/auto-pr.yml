@@ -55,10 +55,15 @@ jobs:
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
           # Get the commit authors
           COMMITS=$(gh pr view $PR_NUMBER --json commits --jq ".commits[].author.login" | sort | uniq)
+          echo "Commit authors: $COMMITS"
           # Add reviewers to PR
           for AUTHOR in $COMMITS; do
-            echo "Adding reviewer: $AUTHOR"
-            gh pr review $PR_NUMBER --add-reviewer $AUTHOR
+            if [ -n "$AUTHOR" ]; then
+              echo "Adding reviewer: $AUTHOR"
+              gh pr review $PR_NUMBER --add-reviewer $AUTHOR
+            else
+              echo "No authors found"
+            fi
           done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
