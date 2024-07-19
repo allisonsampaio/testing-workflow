@@ -18,14 +18,14 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
       - name: Install GitHub CLI
-        run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
-          sudo apt-add-repository https://cli.github.com/packages
-          sudo apt update
-          sudo apt install gh
+        uses: chrislennon/action-install-gh-cli@v1
 
       - name: Authenticate GitHub CLI
         run: gh auth login --with-token <<< ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Check for existing PR
         id: check_pr
@@ -44,4 +44,3 @@ jobs:
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
           gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
-          gh pr merge $PR_NUMBER --squash --admin --body 'Merged latest changes from develop'
