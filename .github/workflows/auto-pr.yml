@@ -49,12 +49,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get PR details
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          # Output the JSON of PR to debug
+          gh pr view $PR_NUMBER --json commits --jq ".commits" > pr_commits.json
+          cat pr_commits.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Add reviewers to PR
         if: steps.check_pr.outputs.pr_number != ''
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
-          # Get the commit authors
-          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq ".commits[].author.login" | sort | uniq)
+          # Extract the commit authors from the JSON file
+          COMMITS=$(jq -r '.[].author.login' pr_commits.json | sort | uniq)
           echo "Commit authors: $COMMITS"
           # Add reviewers to PR
           for AUTHOR in $COMMITS; do
