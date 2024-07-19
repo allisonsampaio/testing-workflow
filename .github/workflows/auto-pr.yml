@@ -58,6 +58,9 @@ jobs:
           # Get the base commit hash where `develop` branched off from `main`
           base_commit=$(git merge-base origin/main origin/develop)
 
+          # Debug: Output the base commit hash
+          echo "Base commit: $base_commit"
+
           # Ensure the `base_commit` is not empty
           if [ -z "$base_commit" ]; then
             echo "Base commit not found. Ensure the `develop` branch has been created from `main`."
@@ -67,6 +70,9 @@ jobs:
           # List commits from the base commit to the latest commit on `develop`
           commit_range=$(git log --format='%H' $base_commit..origin/develop)
 
+          # Debug: Output the commit range
+          echo "Commit range: $commit_range"
+
           # Check if `commit_range` is not empty
           if [ -z "$commit_range" ]; then
             echo "No commits found in the range. Ensure there are new commits on `develop`."
@@ -75,6 +81,9 @@ jobs:
 
           # Get the authors of these commits
           authors=$(git log --format='%aN' $commit_range | sort -u)
+
+          # Debug: Output the authors list
+          echo "Authors: $authors"
 
           # Convert to a comma-separated list
           authors_list=$(echo "$authors" | tr '\n' ',' | sed 's/,$//')
