@@ -37,7 +37,7 @@ jobs:
       - name: Create PR if not exists
         if: steps.check_pr.outputs.pr_number == ''
         run: |
-          gh pr create --base main --head develop --title "Automated PR from develop to main" --body "This is an automated PR from develop to main."
+          gh pr create --base main --head develop --title "[Deploy to Prod] Automated PR from develop to main" --body "This is an automated PR from develop to main."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,5 +46,18 @@ jobs:
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
           gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add reviewers to PR
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          # Get list of commit authors
+          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq ".commits[].author.login")
+          # Add reviewers to PR
+          for AUTHOR in $COMMITS; do
+            gh pr review $PR_NUMBER --add-reviewer $AUTHOR
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
