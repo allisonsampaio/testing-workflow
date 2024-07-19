@@ -1,0 +1,61 @@
+name: Auto PR from develop to master
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create-or-update-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      - name: Check for existing PR
+        id: check_pr
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pullRequests } = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              base: 'master',
+              head: 'develop',
+            });
+
+            const currentDate = '${{ steps.date.outputs.date }}';
+            const existingPR = pullRequests.find(pr => new Date(pr.created_at).toISOString().split('T')[0] === currentDate);
+
+            return existingPR ? existingPR.number : null;
+          result-encoding: string
+
+      - name: Create or update PR
+        if: steps.check_pr.outputs.result == 'null'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: master
+          head: develop
+          title: "Automated PR from develop to master"
+          body: "This is an automated PR from develop to master."
+
+      - name: Update existing PR
+        if: steps.check_pr.outputs.result != 'null'
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.result }}
+          git fetch origin develop
+          git checkout develop
+          git pull origin develop
+          git push origin develop
+          gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
