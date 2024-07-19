@@ -68,7 +68,7 @@ jobs:
           jq '.' pr_commits.json
 
           # Extract the commit authors from the JSON file
-          COMMITS=$(jq -r '.commits[].author.login // empty' pr_commits.json | sort | uniq)
+          COMMITS=$(jq -r '.commits[].authors[].login' pr_commits.json | sort | uniq)
           echo "Commit authors: $COMMITS"
 
           # Add reviewers to PR
