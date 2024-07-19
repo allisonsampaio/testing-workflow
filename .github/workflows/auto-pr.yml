@@ -1,0 +1,50 @@
+name: Auto PR from develop to main
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create-or-update-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Install GitHub CLI
+        uses: dev-hanz-ops/install-gh-cli-action@v0.1.0
+        with:
+          gh-cli-version: 2.32.0
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Check for existing PR
+        id: check_pr
+        run: |
+          PR=$(gh pr list --base main --head develop --state open --json number --jq ".[] | .number")
+          echo "::set-output name=pr_number::$PR"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create PR if not exists
+        if: steps.check_pr.outputs.pr_number == ''
+        run: |
+          gh pr create --base main --head develop --title "Automated PR from develop to main" --body "This is an automated PR from develop to main."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update existing PR
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
