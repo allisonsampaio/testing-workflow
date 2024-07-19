@@ -37,7 +37,7 @@ jobs:
       - name: Create PR if not exists
         if: steps.check_pr.outputs.pr_number == ''
         run: |
-          gh pr create --base main --head develop --title "Automated PR from develop to main" --body "This is an automated PR from develop to main."
+          gh pr create --base main --head develop --title "[Deploy to Prod] Automated PR from develop to main" --body "This is an automated PR from develop to main."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,5 +46,26 @@ jobs:
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
           gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get PR details
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          gh pr view $PR_NUMBER --json commits > pr_commits.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract and add reviewers
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          COMMITS=$(jq -r '.commits[].authors[].login' pr_commits.json | sort | uniq)
+          for AUTHOR in $COMMITS; do
+            if [ -n "$AUTHOR" ]; then
+              gh pr edit $PR_NUMBER --add-reviewer $AUTHOR
+            fi
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
