@@ -53,9 +53,7 @@ jobs:
         if: steps.check_pr.outputs.pr_number != ''
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
-          # Output the JSON of PR to debug
           gh pr view $PR_NUMBER --json commits > pr_commits.json
-          cat pr_commits.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -63,21 +61,10 @@ jobs:
         if: steps.check_pr.outputs.pr_number != ''
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
-          # Check the structure of the JSON file
-          echo "Inspecting pr_commits.json"
-          jq '.' pr_commits.json
-
-          # Extract the commit authors from the JSON file
           COMMITS=$(jq -r '.commits[].authors[].login' pr_commits.json | sort | uniq)
-          echo "Commit authors: $COMMITS"
-
-          # Add reviewers to PR
           for AUTHOR in $COMMITS; do
             if [ -n "$AUTHOR" ]; then
-              echo "Adding reviewer: $AUTHOR"
               gh pr edit $PR_NUMBER --add-reviewer $AUTHOR
-            else
-              echo "No valid authors found"
             fi
           done
         env:
