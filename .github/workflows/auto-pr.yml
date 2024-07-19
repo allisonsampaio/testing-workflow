@@ -26,15 +26,10 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Get current date
-        id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-
       - name: Check for existing PR
         id: check_pr
         run: |
-          DATE=$(date +'%Y-%m-%d')
-          PR=$(gh pr list --base main --head develop --state open --json number,createdAt --jq ".[] | select(.createdAt | startswith(\"$DATE\")) | .number")
+          PR=$(gh pr list --base main --head develop --state open --json number --jq ".[] | .number")
           echo "::set-output name=pr_number::$PR"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
