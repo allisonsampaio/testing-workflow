@@ -1,4 +1,4 @@
-name: Auto PR from develop to master
+name: Auto PR from develop to main
 
 on:
   push:
@@ -17,45 +17,31 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Get current date
-        id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt update
+          sudo apt install gh
+
+      - name: Authenticate GitHub CLI
+        run: gh auth login --with-token <<< ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for existing PR
         id: check_pr
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: pullRequests } = await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              base: 'master',
-              head: 'develop',
-            });
+        run: |
+          DATE=$(date +'%Y-%m-%d')
+          PR=$(gh pr list --base main --head develop --state open --json number,createdAt --jq ".[] | select(.createdAt | startswith(\"$DATE\")) | .number")
+          echo "::set-output name=pr_number::$PR"
 
-            const currentDate = '${{ steps.date.outputs.date }}';
-            const existingPR = pullRequests.find(pr => new Date(pr.created_at).toISOString().split('T')[0] === currentDate);
-
-            return existingPR ? existingPR.number : null;
-          result-encoding: string
-
-      - name: Create or update PR
-        if: steps.check_pr.outputs.result == 'null'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: master
-          head: develop
-          title: "Automated PR from develop to master"
-          body: "This is an automated PR from develop to master."
+      - name: Create PR if not exists
+        if: steps.check_pr.outputs.pr_number == ''
+        run: |
+          gh pr create --base main --head develop --title "Automated PR from develop to main" --body "This is an automated PR from develop to main."
 
       - name: Update existing PR
-        if: steps.check_pr.outputs.result != 'null'
+        if: steps.check_pr.outputs.pr_number != ''
         run: |
-          PR_NUMBER=${{ steps.check_pr.outputs.result }}
-          git fetch origin develop
-          git checkout develop
-          git pull origin develop
-          git push origin develop
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
           gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
+          gh pr merge $PR_NUMBER --squash --admin --body 'Merged latest changes from develop'
