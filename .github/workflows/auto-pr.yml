@@ -70,7 +70,7 @@ jobs:
           for AUTHOR in $COMMITS; do
             if [ -n "$AUTHOR" ]; then
               echo "Adding reviewer: $AUTHOR"
-              gh pr review $PR_NUMBER --add-reviewer $AUTHOR
+              gh pr edit $PR_NUMBER --add-reviewer $AUTHOR
             else
               echo "No authors found"
             fi
