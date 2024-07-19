@@ -1,4 +1,4 @@
-name: Auto PR from develop to master
+name: Auto PR from develop to main
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
 
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Check for existing PR
         id: check_pr
@@ -30,11 +30,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              base: 'master',
-              head: 'develop',
+              base: 'main',
+              head: 'develop'
             });
 
-            const currentDate = '${{ steps.date.outputs.date }}';
+            const currentDate = process.env.date;
             const existingPR = pullRequests.find(pr => new Date(pr.created_at).toISOString().split('T')[0] === currentDate);
 
             return existingPR ? existingPR.number : null;
@@ -45,10 +45,10 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: master
+          base: main
           head: develop
-          title: "Automated PR from develop to master"
-          body: "This is an automated PR from develop to master."
+          title: "Automated PR from develop to main"
+          body: "This is an automated PR from develop to main."
 
       - name: Update existing PR
         if: steps.check_pr.outputs.result != 'null'
