@@ -48,3 +48,35 @@ jobs:
           gh pr comment $PR_NUMBER --body 'Updated with latest changes from develop'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commit authors from develop
+        id: get_commit_authors
+        run: |
+          # Fetch the latest changes
+          git fetch origin
+
+          # Get the base commit hash where `develop` branched off from `main`
+          base_commit=$(git merge-base origin/main origin/develop)
+
+          # List commits from the base commit to the latest commit on `develop`
+          commit_range=$(git log --format='%H' $base_commit..origin/develop)
+
+          # Get the authors of these commits
+          authors=$(git log --format='%aN' $commit_range | sort -u)
+
+          # Convert to a comma-separated list
+          authors_list=$(echo "$authors" | tr '\n' ',' | sed 's/,$//')
+
+          echo "::set-output name=authors::$authors_list"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add reviewers to PR
+        if: steps.check_pr.outputs.pr_number != ''
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          AUTHORS=${{ steps.get_commit_authors.outputs.authors }}
+          # Add reviewers to the PR
+          gh pr edit $PR_NUMBER --add-reviewer $AUTHORS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
