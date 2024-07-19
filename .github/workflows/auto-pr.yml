@@ -53,10 +53,11 @@ jobs:
         if: steps.check_pr.outputs.pr_number != ''
         run: |
           PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
-          # Get list of commit authors
-          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq ".commits[].author.login")
+          # Get the commit authors
+          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq ".commits[].author.login" | sort | uniq)
           # Add reviewers to PR
           for AUTHOR in $COMMITS; do
+            echo "Adding reviewer: $AUTHOR"
             gh pr review $PR_NUMBER --add-reviewer $AUTHOR
           done
         env:
